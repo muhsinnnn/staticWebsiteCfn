@@ -1,66 +1,75 @@
 AWSTemplateFormatVersion: 2010-09-09
-
 Description: |
-  This CloudFormation Template was written for running Kittens Carousel Static Website on EC2. 
-  Kittens Carousel Static Website will be deployed on Amazon Linux 2023 EC2 Instance with custom 
-  security group which allows http connections on port 80 and ssh port 22 from anywhere. Kittens Carousel Static Website
-  is downloaded from my Public Github repository, then deployed on Apache Web Server.
-
+  dumenden cfn show
 Parameters:
+  myKeypair:
+    Description: choose your keypair
+    Type: AWS::EC2::KeyPair::KeyName
+    Default: firstkey
+
+  myInstanceType:
+    Description: choose your instance
+    Type: String
+    Default: t2.micro
+    AllowedValues:
+         - t2.micro
+         - t3.micro
+         - t3.small
+
   LatestAmiId:
     Type: 'AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>'
-    Default: '/aws/service/ami-amazon-linux-latest/al2023-ami-minimal-kernel-default-x86_64'
+    Default: '/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-6.1-x86_64'
+
   
-Resources: 
-  
+Resources:
+
   myWebServer:
     Type: AWS::EC2::Instance
     Properties:
       ImageId: !Ref LatestAmiId
-      InstanceType: t2.micro
-      KeyName: firstkey
-      SecurityGroups: 
+      InstanceType: !Ref myInstanceType
+      KeyName: !Ref myKeypair
+      SecurityGroupIds: 
         - !Ref mySecGrp
       Tags: 
         - Key: Name
-          Value: muhProjectEC2
+          Value: !Sub Web Server of ${AWS::StackName} Stack 
+          #substutional henüz üretilmedi demek
       UserData: !Base64 |
-        #!/bin/bash
+        #! /bin/bash
         dnf update -y
-        dnf install -y httpd wget
+        dnf install httpd -y
         systemctl start httpd
         systemctl enable httpd
         cd /var/www/html
-        FOLDER="https://raw.githubusercontent.com/awsdevopsteam/101-kittens-carousel-staticwebsite-ec2/main/static-web"
-        wget -O index.html ${FOLDER}/index.html
-        wget -O cat0.jpg ${FOLDER}/cat0.jpg
-        wget -O cat1.jpg ${FOLDER}/cat1.jpg
-        wget -O cat2.jpg ${FOLDER}/cat2.jpg
-        systemctl restart httpd
+        FOLDER="https://raw.githubusercontent.com/muhsinnnn/staticWebsiteCfn/refs/heads/main/static-web"
+        wget ${FOLDER}/index.html
+        wget ${FOLDER}/cat0.jpg
+        wget ${FOLDER}/cat1.jpg
+        wget ${FOLDER}/cat2.jpg
 
 
   mySecGrp:
     Type: AWS::EC2::SecurityGroup
     Properties:
-      GroupDescription: allow ssh and http connect # Required
-      GroupName: mySecGrp
+      GroupDescription: allow ssh and http # Required
       SecurityGroupIngress:
         - IpProtocol: tcp
-          FromPort: 80          # Başlangıç portu (80)
-          ToPort: 80            # Bitiş portu (80)
-          CidrIp: 0.0.0.0/0     # Herkese açık (dünya geneli) 
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
         - IpProtocol: tcp
-          FromPort: 22          # Başlangıç portu (80)
-          ToPort: 22            # Bitiş portu (80)
-          CidrIp: 0.0.0.0/0     # Herkese açık (dünya geneli) 
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
       Tags: 
         - Key: Name
-          Value: mySecGrp
-    
+          Value: muh-cohort18-kitten
+
 
 Outputs:
   webSiteURL:
-    Description: URL of the website
-    Value: !Sub
-      - http://${PublicIp}/
-      - PublicIp: !GetAtt myWebServer.PublicIp
+    Description: ip of website 
+    Value: !Sub 
+      - http://${publicIP}
+      - publicIP: !GetAtt myWebServer.PublicIp
